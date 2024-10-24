@@ -75,7 +75,7 @@ def eliminar(elemento, lista, id):
             print(f"El ID '{id}' no existe.")
 
 def ver(elemento, lista):
-    if not lista:
+    if len(lista)==0:
         print(f"No hay {elemento}s registrados.")
         return
     print(f"Lista de {elemento}s:")
