@@ -4,7 +4,7 @@
 # Santiago diego otta mendez 1151647
 # Valentino perez lingua 1190848
 
-import random
+import random, datetime
 
 def generarId(usuarios):
     continuar = True
@@ -100,17 +100,26 @@ def ver(elemento, lista):
         for libro in lista:
             print(f"SKU: {libro[0]} | Título: {libro[1]} | Autor: {libro[2]} | Género: {libro[3]} | Stock: {libro[4]}")
             print("─" * 110)
-    if elemento == "usuario":
-        filtro = int(input("Ingresa el DNI para buscar: ")).strip()  
+    elif elemento == "usuario":
+        filtro = input("Ingresa el DNI para buscar: ").strip()  
         print("─" * 50)
         encontrado = False
         for usuario in lista:
-            if filtro in usuario['DNI']:
+            if filtro in str(usuario['DNI']):
                 print(f"ID: {usuario['ID']} | Nombre: {usuario['Nombre']} | Apellido: {usuario['Apellido']} | DNI: {usuario['DNI']}")
                 print("─" * 50)
                 encontrado = True
-        if encontrado == False:
+        if not encontrado:
             print("❌ No se encontró ningún usuario con ese DNI.")
+    elif elemento == "prestamos":
+        print("─" * 80)
+        encontrado = False
+        for prestamo in lista:
+            print(f"ID Préstamo: {prestamo['ID']} | Libro: {prestamo['Libro']} | Usuario: {prestamo['Usuario']} | Fecha de Préstamo: {prestamo['Fecha']} | Fecha de Devolución: {prestamo['FechaDevolucion']}")
+            print("─" * 80)
+            encontrado = True
+        if not encontrado:
+            print("❌ No se encontraron préstamos.")
 
 def cargarUsuarios():
     usuarios = []
@@ -139,7 +148,7 @@ def prestarLibro(usuarios, libros, prestamos):
     if usuarioId == -1:
         return
     else:
-        resultados = buscarLibro(libros)  
+        resultados = buscarLibro(libros)
         if resultados != []:
             skuLibro = int(input("Ingresá el SKU del libro a prestar o -1 para volver: "))
             if skuLibro == -1:
@@ -161,14 +170,25 @@ def prestarLibro(usuarios, libros, prestamos):
                 if libro == None:
                     print(f"El libro con SKU '{skuLibro}' no existe.")
                     return
-                if libro[4] <= 0:  
+                if libro[4] <= 0:  # Verifica disponibilidad
                     print(f"El libro con SKU '{skuLibro}' no está disponible para préstamo.")
                     return
 
-                prestamos.append({'IdUsuario': usuarioId, 'SKULibro': skuLibro})
-                libro[4] -= 1  
-                print(f"Libro con SKU '{skuLibro}' prestado al usuario '{usuario['Nombre']} {usuario['Apellido']}'.")
+                fechaPrestamo = datetime.datetime.now()
+                # Calcula la fecha de devolución: 14 días después de la fecha de préstamo
+                fechaDevolucion = fechaPrestamo + datetime.timedelta(days=14)
 
+                prestamos.append({
+                    'ID': len(prestamos) + 1,
+                    'Libro': libro[1],  # Nombre del libro
+                    'Usuario': usuario['Nombre'] + ' ' + usuario['Apellido'],  # Nombre completo del usuario
+                    'Fecha': fechaPrestamo.strftime('%d/%m/%Y'),  # Fecha de préstamo
+                    'FechaDevolucion': fechaDevolucion.strftime('%d/%m/%Y')  # Fecha límite de devolución
+                })
+                libro[4] -= 1  # Decrementa el stock del libro
+                print(f"Libro con SKU '{skuLibro}' prestado al usuario '{usuario['Nombre']} {usuario['Apellido']}' hasta {fechaDevolucion.strftime('%d/%m/%Y')}.")
+
+                
 def devolverLibro(usuarios, libros, prestamos):
     ver("usuario", usuarios)
     usuarioId = int(input("Ingresá el ID del usuario o -1 para volver: "))
@@ -176,7 +196,7 @@ def devolverLibro(usuarios, libros, prestamos):
         return
     else:
         ver("libro", libros)
-        skuLibro = int(input("Ingresá el SKU del libro a prestar o -1 para volver: "))
+        skuLibro = int(input("Ingresá el SKU del libro a devolver o -1 para volver: "))
         if skuLibro == -1:
             return
         else:
@@ -206,8 +226,13 @@ def devolverLibro(usuarios, libros, prestamos):
             if libro != None:
                 libro[4] += 1 
 
+            fechaDevolucionReal = datetime.datetime.now()
+            if fechaDevolucionReal > prestamo['FechaDevolucion']:
+                diasRetraso = (fechaDevolucionReal - prestamo['FechaDevolucion']).days
+                print(f"❌ El libro se devolvió con {diasRetraso} días de retraso. Penalización aplicada.")
             prestamos.remove(prestamo)
             print(f"Libro con SKU '{skuLibro}' devuelto por el usuario '{usuario['Nombre']} {usuario['Apellido']}'.")
+
 
 
 def menuAñadir(generos, libros, usuarios):
@@ -285,7 +310,7 @@ def menuAñadir(generos, libros, usuarios):
             print("❌ Opción no válida, intentá de nuevo.")
 
 
-def menuVer(generos, libros, usuarios):
+def menuVer(generos, libros, usuarios, prestamos):
     continuar = True
     while continuar:
         print()
@@ -296,7 +321,8 @@ def menuVer(generos, libros, usuarios):
         print("2. 🔍 Ver todos los libros")
         print("3. 🔍 Buscar libro específico")
         print("4. 🔍 Ver usuarios")
-        print("5. 🔙 Volver al menú principal")
+        print("5. 🔍 Ver préstamos")  # Nueva opción para ver préstamos
+        print("6. 🔙 Volver al menú principal")
         
         opcion = input("Seleccioná una opción: ")
 
@@ -309,9 +335,12 @@ def menuVer(generos, libros, usuarios):
         elif opcion == '4':
             ver("usuario", usuarios)
         elif opcion == '5':
+            ver("prestamos", prestamos) 
+        elif opcion == '6':
             continuar = False
         else:
             print("Opción no válida, intentá de nuevo.")
+
 
 def menuEliminar(generos, libros, usuarios):
     continuar = True
@@ -401,14 +430,15 @@ def main():
     prestamos = []
 # MEJORAR MENU Y EL INTERFACE hecho
 #AGREGAR UNA TECLA PARA VOLVER AL MENU hecho
-#FILTRAR POR GENERO/AUTOR/PARTE DEL TITULO
+#FILTRAR hecho
 #MANEJAR UN STOCK listo
+#manejo de archivos hecho
 ##HACER RESERVAS DE UN LIBRO
 ###PERIODO DE PRESTAMO/SANCION O PENALIDAD
 #### TITULOS VENCIDOS Y NO DEVUELTOS
 #USAR MODULO DATE TIME
 #recursion
-#manejo de archivos hecho
+
 
     continuar = True
     while continuar:
@@ -430,7 +460,7 @@ def main():
         elif opcion == '2':
             menuEliminar(generos, libros, usuarios)
         elif opcion == '3':
-            menuVer(generos, libros, usuarios)
+            menuVer(generos, libros, usuarios,prestamos)
         elif opcion == '4':
             menuPrestamos(usuarios, libros, prestamos)
         elif opcion == '5':
