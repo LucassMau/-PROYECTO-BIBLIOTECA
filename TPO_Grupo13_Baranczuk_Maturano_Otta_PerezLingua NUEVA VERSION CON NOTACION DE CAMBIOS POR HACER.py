@@ -7,13 +7,14 @@
 import random
 
 def generarId(usuarios):
-    while True:
+    continuar = True
+    while continuar:
         usuarioId = random.randint(100, 999)
         idUnico = True
         for usuario in usuarios:
             if usuario['ID'] == usuarioId:
                 idUnico = False
-                break
+                continuar=False
         if idUnico:
             return usuarioId
 
@@ -26,22 +27,31 @@ def añadir(elemento, lista, datos, generos=None):
         sku = int(datos[0])
         for libro in lista:
             if libro[0] == sku:
-                print(f"Error: El libro con SKU '{sku}' ya existe.")
+                print(f"❌ Error: El libro con SKU '{sku}' ya existe.")
                 return
         if datos[3] not in generos.values():
-            print(f"Error: El género '{datos[3]}' no existe.")
+            print(f"❌ Error: El género '{datos[3]}' no existe.")
             return
         libro = [sku, datos[1], datos[2], datos[3], datos[4]]
         lista.append(libro)
         print(f"Libro '{datos[1]}' añadido con SKU {sku}.")
-    elif elemento == "usuario":
-        if not datos[0].isalpha() or not datos[1].isalpha():
-            print("Error: El nombre y apellido deben ser una cadena de caracteres.")
-            return
-        usuarioId = generarId(lista)
-        usuario = {'ID': usuarioId, 'Nombre': datos[0], 'Apellido': datos[1]}
-        lista.append(usuario)
-        print(f"Usuario '{datos[0]} {datos[1]}' registrado con ID '{usuarioId}'.")
+    elif elemento == "usuario":   
+        valido_nombre = datos[0].isalpha() and datos[1].isalpha()  
+        if valido_nombre:
+            usuarioId = generarId(lista)
+            usuario = {'ID': usuarioId, 'Nombre': datos[0], 'Apellido': datos[1], 'DNI': datos[2]}
+            lista.append(usuario)
+            print(f"Usuario '{datos[0]} {datos[1]}' registrado con ID '{usuarioId}'.")            
+            try:
+                arch=open("usuarios.txt", "a")
+                arch.write(f"{usuarioId};{datos[0]} {datos[1]};{datos[2]}\n")
+            except FileNotFoundError as mensaje:
+                print("Error al abrir el archivo:", mensaje)
+            except OSError as mensaje:
+                print("Otro error al manejar el archivo:", mensaje)
+        else:
+            print("❌ Error: El nombre y apellido deben ser una cadena de caracteres.")
+
 
 def eliminar(elemento, lista, id):
     if elemento == "género":
@@ -75,19 +85,53 @@ def eliminar(elemento, lista, id):
             print(f"El ID '{id}' no existe.")
 
 def ver(elemento, lista):
-    if lista == "":
+    if not lista:
         print(f"No hay {elemento}s registrados.")
         return
-    print(f"Lista de {elemento}s:")
+    
+    print(f"\n{'═'*10} Lista de {elemento}s {'═'*10}")
     if elemento == "género":
+        print("─" * 50)
         for idGenero, nombre in lista.items():
-            print(f"- ID: {idGenero}, Nombre: {nombre}")
+            print(f"ID: {idGenero} | Nombre: {nombre}")
+            print("─" * 50)
     elif elemento == "libro":
+        print("─" * 110)
         for libro in lista:
-            print(f"- SKU: {libro[0]}, Título: {libro[1]}, Autor: {libro[2]}, Género: {libro[3]}, Stock: {libro[4]}")
-    elif elemento == "usuario":
+            print(f"SKU: {libro[0]} | Título: {libro[1]} | Autor: {libro[2]} | Género: {libro[3]} | Stock: {libro[4]}")
+            print("─" * 110)
+    if elemento == "usuario":
+        filtro = int(input("Ingresa el DNI para buscar: ")).strip()  
+        print("─" * 50)
+        encontrado = False
         for usuario in lista:
-            print(f"- ID: {usuario['ID']}, Nombre: {usuario['Nombre']}, Apellido: {usuario['Apellido']}")
+            if filtro in usuario['DNI']:
+                print(f"ID: {usuario['ID']} | Nombre: {usuario['Nombre']} | Apellido: {usuario['Apellido']} | DNI: {usuario['DNI']}")
+                print("─" * 50)
+                encontrado = True
+        if encontrado == False:
+            print("❌ No se encontró ningún usuario con ese DNI.")
+
+def cargarUsuarios():
+    usuarios = []
+    try:
+        arch = open("usuarios.txt", "rt")
+        linea = arch.readline()
+        while linea:
+            usuarioId, nombre_apellido, dni = linea.split(';')
+            nombre, apellido = nombre_apellido.split()
+            usuarios.append({'ID': int(usuarioId), 'Nombre': nombre, 'Apellido': apellido, 'DNI': int(dni)})
+            linea = arch.readline()
+    except FileNotFoundError as mensaje:
+        print("No se encontró el archivo de usuarios.", mensaje)
+    except OSError as mensaje:
+        print("Error al abrir el archivo de usuarios:", mensaje)
+    finally:
+        try:
+            arch.close()
+        except NameError:
+            pass
+    return usuarios
 
 def prestarLibro(usuarios, libros, prestamos):
     ver("usuario", usuarios)
@@ -95,34 +139,35 @@ def prestarLibro(usuarios, libros, prestamos):
     if usuarioId == -1:
         return
     else:
-        ver("libro", libros)
-        skuLibro = int(input("Ingresá el SKU del libro a prestar o -1 para volver: "))
-        if skuLibro == -1:
-            return
-        else:
-            usuario = None
-            for u in usuarios:
-                if u['ID'] == usuarioId:
-                    usuario = u
-                    break
-            if usuario == None:
-                print(f"Usuario con ID '{usuarioId}' no existe.")
+        resultados = buscarLibro(libros)  
+        if resultados != []:
+            skuLibro = int(input("Ingresá el SKU del libro a prestar o -1 para volver: "))
+            if skuLibro == -1:
                 return
-            libro = None
-            for l in libros:
-                if l[0] == skuLibro:
-                    libro = l
-                    break
-            if libro == None:
-                print(f"El libro con SKU '{skuLibro}' no existe.")
-                return
-            if libro[4] <= 0:  # Comprobar stock
-                print(f"El libro con SKU '{skuLibro}' no está disponible para préstamo.")
-                return
+            else:
+                usuario = None
+                for u in usuarios:
+                    if u['ID'] == usuarioId:
+                        usuario = u
+                        break
+                if usuario == None:
+                    print(f"Usuario con ID '{usuarioId}' no existe.")
+                    return
+                libro = None
+                for l in libros:
+                    if l[0] == skuLibro:
+                        libro = l
+                        break
+                if libro == None:
+                    print(f"El libro con SKU '{skuLibro}' no existe.")
+                    return
+                if libro[4] <= 0:  
+                    print(f"El libro con SKU '{skuLibro}' no está disponible para préstamo.")
+                    return
 
-            prestamos.append({'IdUsuario': usuarioId, 'SKULibro': skuLibro})
-            libro[4] -= 1  # Reducir stock
-            print(f"Libro con SKU '{skuLibro}' prestado al usuario '{usuario['Nombre']} {usuario['Apellido']}'.")
+                prestamos.append({'IdUsuario': usuarioId, 'SKULibro': skuLibro})
+                libro[4] -= 1  
+                print(f"Libro con SKU '{skuLibro}' prestado al usuario '{usuario['Nombre']} {usuario['Apellido']}'.")
 
 def devolverLibro(usuarios, libros, prestamos):
     ver("usuario", usuarios)
@@ -159,127 +204,160 @@ def devolverLibro(usuarios, libros, prestamos):
                     libro = l
                     break
             if libro != None:
-                libro[4] += 1  # Incrementar stock al devolver
+                libro[4] += 1 
 
             prestamos.remove(prestamo)
             print(f"Libro con SKU '{skuLibro}' devuelto por el usuario '{usuario['Nombre']} {usuario['Apellido']}'.")
 
+
 def menuAñadir(generos, libros, usuarios):
-    while True:
-        print("\nAñadir:")
-        print("1. Añadir género")
-        print("2. Añadir libro")
-        print("3. Añadir usuario")
-        print("4. Volver al menú principal")
+    continuar = True
+    while continuar:
+        print()
+        print("═"*40)
+        print("Menú Añadir".center(40))
+        print("═"*40)
+        print("1. 📂 Añadir género")
+        print("2. 📚 Añadir libro")
+        print("3. 👤 Añadir usuario")
+        print("4. 🔙 Volver al menú principal")
         
         opcion = input("Seleccioná una opción: ")
 
         if opcion == '1':
             genero = input("Ingresá el nombre del género a añadir o enter para salir: ")
             if genero == '':
-                break
+                continuar = False
             else:
                 añadir("género", generos, genero)
         elif opcion == '2':
             sku = input("Ingresá el SKU del libro o enter para salir: ")
             if sku == '':
-                break
+                continuar = False
             else:
                 titulo = input("Ingresá el título del libro o enter para salir: ")
                 if titulo == '':
-                    break
+                    continuar = False
                 else:
                     autor = input("Ingresá el autor del libro o enter para salir: ")
                     if autor == '':
-                        break
+                        continuar = False
                     else:
                         genero = input("Ingresá el género del libro o enter para salir: ")
                         if genero == '':
-                            break
+                            continuar = False
                         else:
                             stock = int(input("Ingresá la cantidad en stock o enter para salir: "))
                             if stock == '':
-                                break
+                                continuar = False
                             else:
-                                añadir("libro", libros, (sku, titulo, autor, genero, stock), generos)
+                                añadir("libro", libros, (sku, titulo, autor, genero, stock, generos))
         elif opcion == '3':
             nombre = input("Ingresá su nombre o enter para salir: ")
             if nombre == '':
-                break
+                continuar = False
             else:
                 apellido = input("Ingresá su apellido o enter para salir: ")
                 if apellido == '':
-                    break
+                    continuar = False
                 else:
-                    añadir("usuario", usuarios, (nombre, apellido))
-        elif opcion == '4':
-            break
-        else:
-            print("Opción no válida, intentá de nuevo.")
+                    while True:
+                        try:
+                            dni = input("Ingresá su DNI: ").strip()
+                            if dni == '': 
+                                continuar = False
+                                break 
+                            if not dni.isdigit():
+                                print("❌ El DNI debe ser numérico.")
+                                continue  
+                            if len(dni) < 7 or len(dni) > 9:
+                                print("❌ El DNI debe tener entre 7 y 9 dígitos.")
+                                continue 
+                            dni = int(dni)  
+                            añadir("usuario", usuarios, (nombre, apellido, dni))
+                            break  
+                        except ValueError:
+                            print("❌ Error: El DNI debe ser un número entero válido.")
 
-def menuEliminar(generos, libros, usuarios):
-    while True:
-        print("\nEliminar:")
-        print("1. Eliminar género")
-        print("2. Eliminar libro")
-        print("3. Eliminar usuario")
-        print("4. Volver al menú principal")
-        
-        opcion = input("Seleccioná una opción: ")
-
-        if opcion == '1':
-            ver("género", generos)  # Mostrar lista de géneros
-            idGenero = input("Ingresá el ID del género a eliminar o enter para voler atras: ")
-            if idGenero == '':
-                break
-            else:
-                eliminar("género", generos, idGenero)
-        elif opcion == '2':
-            ver("libro", libros)  # Mostrar lista de libros
-            sku = input("Ingresá el SKU del libro a eliminar o enter para volver atras: ")
-            if sku == '':
-                break
-            else:
-                eliminar("libro", libros, sku)
-        elif opcion == '3':
-            ver("usuario", usuarios)  # Mostrar lista de usuarios
-            idUsuario = input("Ingresá el ID del usuario a eliminar o enter para volver atras: ")
-            if idUsuario == '':
-                break
-            else:
-                eliminar("usuario", usuarios, idUsuario)
         elif opcion == '4':
-            break
+            continuar = False
         else:
-            print("Opción no válida, intentá de nuevo.")
+            print("❌ Opción no válida, intentá de nuevo.")
+
 
 def menuVer(generos, libros, usuarios):
-    while True:
-        print("\nVer:")
-        print("1. Ver géneros")
-        print("2. Ver libros")
-        print("3. Ver usuarios")
-        print("4. Volver al menú principal")
+    continuar = True
+    while continuar:
+        print()
+        print("═"*40)
+        print("Menú Ver".center(40))
+        print("═"*40)
+        print("1. 🔍 Ver géneros")
+        print("2. 🔍 Ver todos los libros")
+        print("3. 🔍 Buscar libro específico")
+        print("4. 🔍 Ver usuarios")
+        print("5. 🔙 Volver al menú principal")
         
         opcion = input("Seleccioná una opción: ")
 
         if opcion == '1':
             ver("género", generos)
         elif opcion == '2':
-            ver("libro", libros)
+            ver("libro", libros) 
+        elif opcion == '3':
+            buscarLibro(libros)
+        elif opcion == '4':
+            ver("usuario", usuarios)
+        elif opcion == '5':
+            continuar = False
+        else:
+            print("Opción no válida, intentá de nuevo.")
+
+def menuEliminar(generos, libros, usuarios):
+    continuar = True
+    while continuar:
+        print()
+        print("═"*40)
+        print("Menú Eliminar".center(40))
+        print("═"*40)
+        print("1. 🗑️  Eliminar género")
+        print("2. 🗑️  Eliminar libro")
+        print("3. 🗑️  Eliminar usuario")
+        print("4. 🔙 Volver al menú principal")
+        
+        opcion = input("Seleccioná una opción: ")
+
+        if opcion == '1':
+            ver("género", generos)
+            idGenero = input("Ingresá el ID del género a eliminar o enter para volver: ")
+            if idGenero:
+                eliminar("género", generos, idGenero)
+        elif opcion == '2':
+            resultados = buscarLibro(libros) 
+            if resultados:
+                sku = input("Ingresá el SKU del libro a eliminar o enter para volver: ")
+                if sku:
+                    eliminar("libro", libros, sku)
         elif opcion == '3':
             ver("usuario", usuarios)
+            idUsuario = input("Ingresá el ID del usuario a eliminar o enter para volver: ")
+            if idUsuario:
+                eliminar("usuario", usuarios, idUsuario)
         elif opcion == '4':
-            break
+            continuar = False
         else:
             print("Opción no válida, intentá de nuevo.")
 
 def menuPrestamos(usuarios, libros, prestamos):
-    while True:
-        print("\nPréstamos:")
-        print("1. Prestar libro")
-        print("2. Devolver libro")
-        print("3. Volver al menú principal")
+    continuar = True
+    while continuar:
+        print()
+        print("═"*40)
+        print("Gestión de Préstamos".center(40))
+        print("═"*40)
+        print("1. 📖 Prestar libro")
+        print("2. 🔄 Devolver libro")
+        print("3. 🔙 Volver al menú principal")
         
         opcion = input("Seleccioná una opción: ")
 
@@ -288,12 +366,29 @@ def menuPrestamos(usuarios, libros, prestamos):
         elif opcion == '2':
             devolverLibro(usuarios, libros, prestamos)
         elif opcion == '3':
-            break
+            continuar = False
         else:
             print("Opción no válida, intentá de nuevo.")
 
+def buscarLibro(libros):
+    print("\nBúsqueda de Libros")
+    print("Podés buscar por parte del título, autor o género.")
+    
+    criterio = input("Ingresá el criterio de búsqueda: ").lower()
+    resultados = [libro for libro in libros if criterio in libro[1].lower() or  criterio in libro[2].lower() or  criterio in libro[3].lower()]   
+    if resultados:
+        print(f"\n{'═'*10} Resultados de la búsqueda {'═'*10}")
+        print("─" * 110)
+        for libro in resultados:
+            print(f"SKU: {libro[0]} | Título: {libro[1]} | Autor: {libro[2]} | Género: {libro[3]} | Stock: {libro[4]}")
+            print("─" * 110)
+        return resultados
+    else:
+        print("No se encontraron libros que coincidan con el criterio de búsqueda.")
+        return []
+    
 def main():
-    usuarios = []
+    usuarios = cargarUsuarios()
     libros = [
         [1,'Duna','Frank Herbert','Ciencia Ficción',3],
         [2,'Neuromante','William Gibson','Ciencia Ficción',2],
@@ -304,22 +399,29 @@ def main():
     ]
     generos = {1: 'Ciencia Ficción', 2: 'Fantasía', 3: 'Misterio'}
     prestamos = []
-# MEJORAR MENU reducido el menu Y EL INTERFACE
+# MEJORAR MENU Y EL INTERFACE hecho
 #AGREGAR UNA TECLA PARA VOLVER AL MENU hecho
 #FILTRAR POR GENERO/AUTOR/PARTE DEL TITULO
-#MANEJAR UN STOCK creo q listo
+#MANEJAR UN STOCK listo
 ##HACER RESERVAS DE UN LIBRO
 ###PERIODO DE PRESTAMO/SANCION O PENALIDAD
 #### TITULOS VENCIDOS Y NO DEVUELTOS
 #USAR MODULO DATE TIME
-#
-    while True:
-        print("\nOpciones:")
-        print("1. Añadir")
-        print("2. Eliminar")
-        print("3. Ver")
-        print("4. Préstamos")
-        print("5. Salir")
+#recursion
+#manejo de archivos hecho
+
+    continuar = True
+    while continuar:
+        print()
+        print("═"*40)
+        print("Sistema de Biblioteca".center(40))
+        print("Menú Principal".center(40))
+        print("═"*40)
+        print("1. ➕ Añadir")
+        print("2. 🗑️  Eliminar")
+        print("3. 🔍 Ver")
+        print("4. 📚 Préstamos")
+        print("5. 🚪 Salir")
 
         opcion = input("Seleccioná una opción: ")
 
@@ -332,10 +434,10 @@ def main():
         elif opcion == '4':
             menuPrestamos(usuarios, libros, prestamos)
         elif opcion == '5':
-            print("Saliste del programa!")
-            break
+            print("👋 Saliste del programa. ¡Hasta la próxima!")
+            continuar=False
         else:
-            print("Opción no válida, intentá de nuevo.")
+            print("❌ Opción no válida, intentá de nuevo.")
 
 if __name__ == "__main__":
     main()
