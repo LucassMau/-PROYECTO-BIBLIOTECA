@@ -112,6 +112,14 @@ def eliminar(elemento, lista, id):
                 lista.remove(usuario)
                 print(f"Usuario con ID '{id}' eliminado.")
                 usuarioEncontrado = True
+                try:
+                    with open("usuarios.txt", "w") as arch:
+                        for u in lista:
+                            arch.write(f"{u['ID']};{u['Nombre']} {u['Apellido']};{u['DNI']}\n")
+                except FileNotFoundError:
+                    print("❌ No se encontró el archivo 'usuarios.txt'.")
+                except OSError as e:
+                    print(f"❌ Error al manejar el archivo: {e}")
                 break
         if usuarioEncontrado == False:
             print(f"El ID '{id}' no existe.")
