@@ -1,4 +1,3 @@
 1;Juan Perez;46352436
 2;Ana Gomez;45342125
 3;Luis Martinez;24352769
-890;sd fg;45342123
