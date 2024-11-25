@@ -454,10 +454,8 @@ def main():
 #FILTRAR hecho
 #MANEJAR UN STOCK listo
 #manejo de archivos hecho
-##HACER RESERVAS DE UN LIBRO
-###PERIODO DE PRESTAMO/SANCION O PENALIDAD hecho
-#### TITULOS VENCIDOS Y NO DEVUELTOS
-#USAR MODULO DATE TIME hecho
+#PERIODO DE PRESTAMO/SANCION hecho
+#DATE TIME hecho
 #recursion hecho
     continuar = True
     while continuar:
