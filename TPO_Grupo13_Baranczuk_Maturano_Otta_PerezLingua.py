@@ -5,51 +5,6 @@
 
 import random, datetime
 
-def rellenarmatriz(libros, generos):
-    fila = [] 
-    sku = int(input("Ingrese el SKU del libro: ").strip())
-    SkuUnico = False
-    while SkuUnico==False:
-        SkuUnico = buscarsku(libros, sku)
-        if SkuUnico==False:
-            sku = input("El SKU ya existe. Ingrese un SKU único: ").strip()
-
-    titulo = input("Ingrese el título del libro: ").strip()
-    autor = input("Ingrese el autor del libro: ").strip()
-
-    continuar = True
-    while continuar == True:
-        genero = input("Ingrese el género del libro: ").strip()
-        if genero not in generos.values():
-            print(f"❌ El género '{genero}' no existe. Ingrese un género válido.")
-        else:
-            continuar = False
-
-    continuar = True
-    while continuar==True:
-        try:
-            stock = int(input("Ingrese la cantidad en stock: ").strip())
-            continuar = False
-        except ValueError:
-            print("❌ La cantidad de stock debe ser un número entero.")
-
-    fila.append(sku)
-    fila.append(titulo)
-    fila.append(autor)
-    fila.append(genero)
-    fila.append(stock)
-    libros.append(fila)
-    print(f"📚 Libro '{titulo}' añadido con SKU {sku}.")
-
-def buscarsku(libros, sku, index=0):
-    indicador=True
-    if index >= len(libros): #caso base si llegamos al final de la lista sin encontrar el SKU
-        return indicador
-    if libros[index][0] == sku:#caso base si encontramos el SKU en la posición actual
-        indicador=False
-        return indicador
-    return buscarsku(libros, sku, index + 1) #llamada recursiva buscar en la siguiente posición
-
 def generarId(usuarios):
     continuar = True
     while continuar==True:
@@ -69,7 +24,7 @@ def añadir(elemento, lista, datos, generos=None):
         print(f"Género '{datos}' añadido con ID {nuevoId}.")
     elif elemento == "usuario":   
         nombreValido = datos[0].isalpha() and datos[1].isalpha()  
-        if nombreValido:
+        if nombreValido==True:
             usuarioId = generarId(lista)
             usuario = {'ID': usuarioId, 'Nombre': datos[0], 'Apellido': datos[1], 'DNI': datos[2]}
             lista.append(usuario)
@@ -155,7 +110,7 @@ def ver(elemento, lista):
         print("─" * 80)
         encontrado = False
         for prestamo in lista:
-            print(f"ID Préstamo: {prestamo['ID']} | Libro: {prestamo['Libro']} | Usuario: {prestamo['Usuario']} | Fecha de Préstamo: {prestamo['Fecha']} | Fecha de Devolución: {prestamo['FechaDevolucion']}")
+            print(f"ID Préstamo: {prestamo[0]} | Libro: {prestamo[1]} | Usuario: {prestamo[2]} | Fecha de Préstamo: {prestamo[3]} | Fecha de Devolución: {prestamo[4]}")
             print("─" * 80)
             encontrado = True
         if encontrado==False:
@@ -217,13 +172,14 @@ def prestarLibro(usuarios, libros, prestamos):
                 fechaPrestamo = datetime.datetime.now()
                 fechaDevolucion = fechaPrestamo + datetime.timedelta(days=14)
 
-                prestamos.append({
-                    'ID': len(prestamos) + 1,
-                    'Libro': libro[1],
-                    'Usuario': usuario['Nombre'] + ' ' + usuario['Apellido'], 
-                    'Fecha': fechaPrestamo.strftime('%d/%m/%Y'),  
-                    'FechaDevolucion': fechaDevolucion.strftime('%d/%m/%Y') 
-                })
+                prestamos.append([
+                    len(prestamos) + 1,
+                    libro[1],
+                    usuario['Nombre'] + ' ' + usuario['Apellido'], 
+                    fechaPrestamo.strftime('%d/%m/%Y'),  
+                    fechaDevolucion.strftime('%d/%m/%Y') 
+                ])
+                
                 libro[4] -= 1 
                 print(f"Libro con SKU '{skuLibro}' prestado al usuario '{usuario['Nombre']} {usuario['Apellido']}' hasta {fechaDevolucion.strftime('%d/%m/%Y')}.")
 
@@ -273,6 +229,51 @@ def devolverLibro(usuarios, libros, prestamos):
 
         prestamos.remove(prestamo)
         print(f"📚 Libro con SKU '{skuLibro}' devuelto por el usuario '{usuario['Nombre']} {usuario['Apellido']}'.")
+
+def rellenarmatriz(libros, generos):
+    fila = [] 
+    sku = int(input("Ingrese el SKU del libro: ").strip())
+    skuUnico = False
+    while skuUnico==False:
+        skuUnico = buscarsku(libros, sku)
+        if skuUnico==False:
+            sku = input("El SKU ya existe. Ingrese un SKU único: ").strip()
+
+    titulo = input("Ingrese el título del libro: ").strip()
+    autor = input("Ingrese el autor del libro: ").strip()
+
+    continuar = True
+    while continuar == True:
+        genero = input("Ingrese el género del libro: ").strip()
+        if genero not in generos.values():
+            print(f"❌ El género '{genero}' no existe. Ingrese un género válido.")
+        else:
+            continuar = False
+
+    continuar = True
+    while continuar==True:
+        try:
+            stock = int(input("Ingrese la cantidad en stock: ").strip())
+            continuar = False
+        except ValueError:
+            print("❌ La cantidad de stock debe ser un número entero.")
+
+    fila.append(sku)
+    fila.append(titulo)
+    fila.append(autor)
+    fila.append(genero)
+    fila.append(stock)
+    libros.append(fila)
+    print(f"📚 Libro '{titulo}' añadido con SKU {sku}.")
+
+def buscarsku(libros, sku, index=0):
+    indicador=True
+    if index >= len(libros): #caso base si llegamos al final de la lista sin encontrar el SKU
+        return indicador
+    if libros[index][0] == sku:#caso base si encontramos el SKU en la posición actual
+        indicador=False
+        return indicador
+    return buscarsku(libros, sku, index + 1) #llamada recursiva buscar en la siguiente posición
 
 def menuAñadir(generos, libros, usuarios):
     continuar = True
@@ -465,6 +466,7 @@ def main():
 #PERIODO DE PRESTAMO/SANCION hecho
 #DATE TIME hecho
 #recursion hecho
+
     continuar = True
     while continuar:
         print()
