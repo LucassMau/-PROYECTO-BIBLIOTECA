@@ -38,11 +38,7 @@ def añadir(elemento, lista, datos, generos=None):
                 print("Otro error al manejar el archivo:", mensaje)
         else:
             print("❌ Error: El nombre y apellido deben ser una cadena de caracteres.")
-            finally:
-                try:
-                    arch.close()
-                except NameError:
-                    pass
+            
                 
 def eliminar(elemento, lista, id):
     if elemento == "género":
